@@ -17,7 +17,7 @@ Thumbs.db
 .idea/
 
 # Raw boundary downloads (too big for git)
-data-raw/lga_boundaries/
+#data-raw/lga_boundaries/
 
 # Built data — optional, commit if small enough
 # data/*.rds
