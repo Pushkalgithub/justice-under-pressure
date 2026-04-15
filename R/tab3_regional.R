@@ -110,15 +110,25 @@ tab3_server <- function(id = "tab3", filters) {
         left_join(tab_data(), by = "lga")
     })
 
-    # ---- Colour palette: rank-based ----
-    # Rank 1 = highest rate → darkest red.
-    # colorNumeric with reversed ramp so low ranks map to the "hot" end.
+    # ---- Colour palette: rank-based, 30 discrete shades ----
+    # Each LGA is binned into one of 30 buckets by rank.
+    # Rank 1 → bucket 1 (dark red, most severe).
+    # Highest rank → bucket 30 (dark green, safest).
+    #
+    # We build the bins from the full pool of possible ranks (1..max rank
+    # across the whole dataset) rather than only the ranks present for
+    # the currently selected offence/year, so the colour of a given LGA
+    # stays comparable as the user changes filters.
     pal_fn <- reactive({
       req(map_data())
-      colorNumeric(
-        palette  = rev(CHOROPLETH_RAMP),
-        domain   = map_data()$rank,
-        na.color = "#e8e8e8"
+      max_rank <- max(crime_long$rank, na.rm = TRUE)
+
+      colorBin(
+        palette  = CHOROPLETH_RAMP,
+        domain   = c(1, max_rank),
+        bins     = seq(1, max_rank + 1, length.out = N_SHADES + 1),
+        na.color = "#e8e8e8",
+        right    = FALSE   # [1, x) bins — rank 1 goes in bucket 1
       )
     })
 
