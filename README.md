@@ -39,13 +39,14 @@ justice-under-pressure/
    install.packages(c(
      "shiny", "bslib", "dplyr", "tidyr", "stringr", "ggplot2",
      "plotly", "leaflet", "sf", "DT", "scales", "here",
-     "readxl", "purrr"
+     "readxl", "purrr", "htmlwidgets"
    ))
    ```
 3. **Prepare data** (run once):
    ```r
    source("data-raw/01_prepare_lga_crime.R")
    source("data-raw/02_prepare_lga_boundaries.R")
+   source("data-raw/03_prepare_court.R")
    ```
    The second script needs the ABS NSW LGA boundary shapefile — see the
    comments at the top of `02_prepare_lga_boundaries.R` for where to

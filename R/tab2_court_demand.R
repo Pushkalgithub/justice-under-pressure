@@ -20,7 +20,17 @@ tab2_ui <- function(id = "tab2") {
     fluidRow(
       column(12,
         card(
-          card_header("Processing Time Distribution"),
+          card_header(
+            div(class = "d-flex justify-content-between align-items-center w-100",
+                uiOutput(ns("dynamic_plot_title")),
+                div(style = "width: 250px;", 
+                    selectInput(ns("court_select"), NULL, 
+                                choices = c("Supreme Court", "District Court", "Local Court", "Children's Court"),
+                                selected = "Supreme Court",
+                                width = "100%")
+                )
+            )
+          ),
           plotlyOutput(ns("processing_plot"), height = "350px"),
           tags$small(class = "text-muted ps-3 pb-2",
             "Segments are proportional to the finalisation median, ",
@@ -34,13 +44,13 @@ tab2_ui <- function(id = "tab2") {
     fluidRow(
       column(6,
         card(
-          card_header("Court Finalizations"),
+          card_header("Median days from arrest to finalisation by court type"),
           plotlyOutput(ns("finalisations_plot"), height = "320px")
         )
       ),
       column(6,
         card(
-          card_header("Cases Filed by Court"),
+          card_header("Year-on-year % change in median days from arrest to finalisation"),
           plotlyOutput(ns("cases_by_court_plot"), height = "320px")
         )
       )
@@ -56,20 +66,156 @@ tab2_server <- function(id = "tab2", filters) {
     # the BOCSAR court processing dataset you've been working with.
     # Place it in data-raw/ and add a prep script similar to
     # data-raw/01_prepare_lga_crime.R.
-
+    
+   
+    # Graph 1 : Processing time distribution
+    ## change name of title based on the court type selected
+    output$dynamic_plot_title <- renderUI({
+      req(input$court_select)
+      span(paste(input$court_select, "Processing Time Distribution"), 
+           style = "font-weight: 600;")
+    })
+    
     output$processing_plot <- renderPlotly({
-      plotly_empty(type = "bar") |>
-        layout(title = "Processing time — TODO")
+      req(input$court_select)
+      plot_df <- court_bundle$percent_long %>% 
+        filter(Court.Type == input$court_select) %>%
+        mutate(stage = factor(stage, 
+                              levels = c("arrest_to_comm_perc", "comm_to_outcome_perc", "outcome_to_sent_perc"),
+                              labels = c("Arrest to committal", "Committal to outcome", "Outcome to sentence")))
+      p <- ggplot(plot_df, aes(x=Timeframe, y=percentage, fill=stage, text = paste0("Percentage: ", round(percentage, 2), '%'))) + 
+        geom_col() +  
+        labs(
+          # title = paste("Breakdown of", input$court_select, "case processing time"),
+          # subtitle = "Each stage shown as a proportion of median arrest-to-finalisation time",
+          x = "Financial year",
+          y = "% of arrest-to-finalisation time",
+          fill = "Stage"
+        ) +
+        scale_fill_manual(
+          values = c(
+            "Arrest to committal"   = APP_PALETTE$primary,
+            "Committal to outcome"  = APP_PALETTE$secondary,
+            "Outcome to sentence"  = APP_PALETTE$accent
+          )
+        ) + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line.x = element_line(colour = "black"),
+          axis.line.y = element_line(colour = "black")
+        ) +
+        scale_y_continuous(
+          expand = c(0, 0)
+        )
+      
+      ggplotly(p, tooltip = 'text')
     })
 
+    # Graph 2 : Arrest to finalisation time for courts
     output$finalisations_plot <- renderPlotly({
-      plotly_empty(type = "scatter", mode = "lines") |>
-        layout(title = "Finalisations — TODO")
+      plot_df_2 <- court_bundle$main 
+      p2 <- ggplot(plot_df_2, aes(x = Timeframe, y = Arrest.to.finalisation..c., color = Court.Type, group = Court.Type, text = paste0("Median days: ", Arrest.to.finalisation..c.))) + 
+        geom_line() + 
+        geom_point() + 
+        labs(
+          # title = "Median days from arrest to finalisation by court type",
+          x = "Financial year",
+          y = "Median days",
+          colour = "Court type",
+        ) +
+        scale_colour_manual(values = c(
+          "Supreme Court"    = APP_PALETTE$primary,
+          "District Court"   = APP_PALETTE$secondary,
+          "Local Court"      = APP_PALETTE$accent,
+          "Children's Court" = APP_PALETTE$neutral
+        )) + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line.x = element_line(colour = "black"),
+          axis.line.y = element_line(colour = "black")
+        ) +
+        scale_y_continuous(
+          expand = c(0, 0),
+          limits = c(0, 1200)
+        )
+      
+      ggplotly(p2, tooltip = 'text') %>%
+        onRender("
+          function(el) {
+          el.on('plotly_hover', function(d) {
+            var pn = d.points[0].curveNumber;
+            // 1. Dim all lines first
+            var dim = { 'line.width': 1, 'opacity': 0.2 };
+            Plotly.restyle(el, dim);
+      
+            // 2. Highlight the specific hovered line
+            var highlight = { 'line.width': 4, 'opacity': 1 };
+            Plotly.restyle(el, highlight, [pn]);
+          });
+          el.on('plotly_unhover', function(d) {
+            // Reset everything to normal when leaving
+            var reset = { 'line.width': 1, 'opacity': 1 };
+            Plotly.restyle(el, reset);
+          });
+        }
+      ")
     })
 
+    # Graph 3 : Cases filed by court
     output$cases_by_court_plot <- renderPlotly({
-      plotly_empty(type = "bar") |>
-        layout(title = "Cases by court — TODO")
+      plot_df_3 <- court_bundle$percent_change
+      p3 <- ggplot(plot_df_3, aes(x = Timeframe, y = perc_change, color = Court.Type, group = Court.Type, text = paste0("Change: ", round(perc_change, 2), "%"))) + 
+        geom_line() + 
+        geom_point() + 
+        labs(
+          # title = "Year-on-year % change in median days from arrest to finalisation",
+          x = "Financial year",
+          y = "% Change",
+          colour = "Court type",
+        ) +
+        scale_colour_manual(values = c(
+          "Supreme Court"    = APP_PALETTE$primary,
+          "District Court"   = APP_PALETTE$secondary,
+          "Local Court"      = APP_PALETTE$accent,
+          "Children's Court" = APP_PALETTE$neutral
+        )) + 
+        geom_hline(aes(yintercept = 0), color='gray', alpha = 0.4, linewidth=0.3) +
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line.x = element_line(colour = "black"),
+          axis.line.y = element_line(colour = "black")
+        ) +
+        scale_y_continuous(labels = function(x) paste0(x, "%"))
+      
+      ggplotly(p3, tooltip = "text") %>%
+        
+        onRender("
+          function(el) {
+          el.on('plotly_hover', function(d) {
+            var pn = d.points[0].curveNumber;
+            // 1. Dim all lines first
+            var dim = { 'line.width': 1, 'opacity': 0.2 };
+            Plotly.restyle(el, dim);
+      
+            // 2. Highlight the specific hovered line
+            var highlight = { 'line.width': 4, 'opacity': 1 };
+            Plotly.restyle(el, highlight, [pn]);
+          });
+          el.on('plotly_unhover', function(d) {
+            // Reset everything to normal when leaving
+            var reset = { 'line.width': 1, 'opacity': 1 };
+            Plotly.restyle(el, reset);
+          });
+        }
+      ")
     })
+    
+    
   })
 }

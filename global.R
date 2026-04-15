@@ -7,6 +7,9 @@
 # Keep this file lean: packages, data, constants, helpers.
 # ============================================================
 
+# automatically see changes on save (for files)
+options(shiny.autoreload = TRUE)
+
 # ---- Packages ----
 suppressPackageStartupMessages({
   library(shiny)
@@ -21,18 +24,25 @@ suppressPackageStartupMessages({
   library(DT)
   library(scales)
   library(here)
+  library(htmlwidgets)
 })
 
 # ---- Load prepared data ----
 crime_path <- here("data", "lga_crime_long.rds")
 sf_path    <- here("data", "nsw_lga_sf.rds")
+court_path <- here("data", "court_data_clean.rds")
 
 if (!file.exists(crime_path)) {
   stop("Missing data/lga_crime_long.rds. ",
        "Run data-raw/01_prepare_lga_crime.R first.")
 }
+if (!file.exists(court_path)) {
+  stop("Missing data/court_data_clean.rds. ",
+        "Run data-raw/03_prepare_court.R first.")
+}
 
 crime_long <- readRDS(crime_path)
+court_bundle <- readRDS(court_path)
 
 # sf may not be ready yet during early development — load lazily
 nsw_lga_sf <- if (file.exists(sf_path)) readRDS(sf_path) else NULL
@@ -41,6 +51,8 @@ nsw_lga_sf <- if (file.exists(sf_path)) readRDS(sf_path) else NULL
 OFFENCE_CHOICES <- sort(unique(crime_long$offence))
 YEAR_CHOICES    <- sort(unique(crime_long$year))
 LGA_CHOICES     <- sort(unique(crime_long$lga))
+
+COURT_TYPE <- sort(unique(court_bundle$main$Court.Type))
 
 LATEST_YEAR <- max(crime_long$year, na.rm = TRUE)
 
