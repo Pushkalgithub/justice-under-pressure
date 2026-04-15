@@ -1,0 +1,23 @@
+# R / RStudio
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# Shiny
+rsconnect/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Raw boundary downloads (too big for git)
+data-raw/lga_boundaries/
+
+# Built data — optional, commit if small enough
+# data/*.rds
