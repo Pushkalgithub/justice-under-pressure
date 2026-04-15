@@ -1,12 +1,3 @@
-# ============================================================
-# global.R
-# ------------------------------------------------------------
-# Loaded once when the Shiny app starts. Everything here is
-# visible to ui.R, server.R, and all module files.
-#
-# Keep this file lean: packages, data, constants, helpers.
-# ============================================================
-
 # ---- Packages ----
 suppressPackageStartupMessages({
   library(shiny)
