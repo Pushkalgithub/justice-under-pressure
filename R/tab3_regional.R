@@ -7,8 +7,10 @@
 #   - Crime rate by region graph (ranked bar)
 #   - Crime rates in and around Sydney (zoomed choropleth)
 #
-# Colour grading is based on BOTH rank and actual rate per 100k,
-# per the task spec. Users can toggle which drives the colour.
+# Note: BOCSAR ranks LGAs in decreasing order of rate per 100k
+# (rank 1 = highest rate). Since rank is a monotonic function
+# of rate, we colour-grade by rank only — it encodes the same
+# ordering and is cleaner to read.
 # ============================================================
 
 tab3_ui <- function(id = "tab3") {
@@ -19,27 +21,13 @@ tab3_ui <- function(id = "tab3") {
     p(class = "tab-desc",
       "Geographic lens on crime across NSW — where are the hotspots, ",
       "and how do LGAs stack up against each other? Click a region on the ",
-      "map or a bar in the ranking to drill down."),
+      "map or a bar in the ranking to drill down. Regions are coloured by ",
+      "their rank (1 = highest rate per 100,000 population)."),
 
-    # ---- Colour-mode toggle + top KPIs ----
     fluidRow(
       column(8,
         card(
-          card_header(
-            class = "d-flex justify-content-between align-items-center",
-            span("NSW Crime Heatmap"),
-            div(
-              class = "d-flex align-items-center gap-2",
-              tags$small("Colour by:", class = "text-muted"),
-              radioButtons(
-                ns("colour_mode"),
-                label = NULL,
-                choices = c("Rate per 100k" = "rate", "Rank" = "rank"),
-                selected = "rate",
-                inline = TRUE
-              )
-            )
-          ),
+          card_header("NSW Crime Heatmap"),
           leafletOutput(ns("nsw_map"), height = "520px")
         )
       ),
@@ -93,7 +81,7 @@ tab3_ui <- function(id = "tab3") {
           card_header("Crime Rates In and Around Sydney"),
           p(class = "text-muted small px-3 pt-2",
             "Zoomed view of Greater Sydney LGAs only. ",
-            "Uses the same colour scale as the statewide map."),
+            "Uses the same rank-based colour scale as the statewide map."),
           leafletOutput(ns("sydney_map"), height = "480px")
         )
       )
@@ -122,23 +110,16 @@ tab3_server <- function(id = "tab3", filters) {
         left_join(tab_data(), by = "lga")
     })
 
-    # ---- Reactive: colour palette based on mode toggle ----
+    # ---- Colour palette: rank-based ----
+    # Rank 1 = highest rate → darkest red.
+    # colorNumeric with reversed ramp so low ranks map to the "hot" end.
     pal_fn <- reactive({
       req(map_data())
-      if (input$colour_mode == "rate") {
-        colorNumeric(
-          palette = CHOROPLETH_RAMP,
-          domain  = map_data()$rate_per_100k,
-          na.color = "#e8e8e8"
-        )
-      } else {
-        # Rank: 1 = worst, so reverse the ramp
-        colorNumeric(
-          palette = rev(CHOROPLETH_RAMP),
-          domain  = map_data()$rank,
-          na.color = "#e8e8e8"
-        )
-      }
+      colorNumeric(
+        palette  = rev(CHOROPLETH_RAMP),
+        domain   = map_data()$rank,
+        na.color = "#e8e8e8"
+      )
     })
 
     # ---- Tracks the clicked LGA ----
@@ -148,7 +129,6 @@ tab3_server <- function(id = "tab3", filters) {
     # MAP 1 — NSW statewide choropleth
     # ============================================================
     output$nsw_map <- renderLeaflet({
-      # Base map rendered once; data drawn via observer for smoothness
       leaflet(options = leafletOptions(zoomControl = TRUE,
                                        minZoom = 5, maxZoom = 11)) |>
         addProviderTiles(providers$CartoDB.Positron) |>
@@ -159,12 +139,6 @@ tab3_server <- function(id = "tab3", filters) {
       md <- map_data()
       req(md)
       pal <- pal_fn()
-
-      colour_vals <- if (input$colour_mode == "rate") {
-        md$rate_per_100k
-      } else {
-        md$rank
-      }
 
       labels <- sprintf(
         "<strong>%s</strong><br/>Rate: %s per 100k<br/>Rank: %s",
@@ -177,7 +151,7 @@ tab3_server <- function(id = "tab3", filters) {
         clearShapes() |>
         clearControls() |>
         addPolygons(
-          fillColor   = pal(colour_vals),
+          fillColor   = pal(md$rank),
           weight      = 0.6,
           opacity     = 1,
           color       = "white",
@@ -199,12 +173,8 @@ tab3_server <- function(id = "tab3", filters) {
         addLegend(
           position = "bottomright",
           pal      = pal,
-          values   = colour_vals,
-          title    = if (input$colour_mode == "rate") {
-            "Rate per 100k"
-          } else {
-            "Rank (1 = worst)"
-          },
+          values   = md$rank,
+          title    = "Rank (1 = worst)",
           opacity  = 0.9
         )
     })
@@ -229,10 +199,6 @@ tab3_server <- function(id = "tab3", filters) {
       if (nrow(row) == 0) {
         return(div(class = "text-muted", "No data for this region."))
       }
-
-      # 10-year trend sparkline values
-      trend <- filter_crime(offence = filters$offence(), lgas = lga) |>
-        arrange(year)
 
       div(
         h4(lga, style = paste0("color:", APP_PALETTE$primary, ";",
@@ -385,12 +351,6 @@ tab3_server <- function(id = "tab3", filters) {
 
       syd <- md |> filter(lga %in% SYDNEY_LGAS)
 
-      colour_vals <- if (input$colour_mode == "rate") {
-        syd$rate_per_100k
-      } else {
-        syd$rank
-      }
-
       labels <- sprintf(
         "<strong>%s</strong><br/>Rate: %s per 100k<br/>Rank: %s",
         syd$lga,
@@ -402,7 +362,7 @@ tab3_server <- function(id = "tab3", filters) {
         clearShapes() |>
         clearControls() |>
         addPolygons(
-          fillColor   = pal(colour_vals),
+          fillColor   = pal(syd$rank),
           weight      = 1,
           opacity     = 1,
           color       = "white",
@@ -423,8 +383,8 @@ tab3_server <- function(id = "tab3", filters) {
         addLegend(
           position = "bottomright",
           pal      = pal,
-          values   = colour_vals,
-          title    = if (input$colour_mode == "rate") "Rate per 100k" else "Rank",
+          values   = syd$rank,
+          title    = "Rank (1 = worst)",
           opacity  = 0.9
         )
     })
