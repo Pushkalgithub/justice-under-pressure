@@ -24,8 +24,10 @@ ui <- page_navbar(
                "NSW Crime & Court Dashboard")
   ),
   theme = app_theme,
-  bg    = APP_PALETTE$primary,
-  inverse = TRUE,
+  navbar_options = navbar_options(
+    bg = APP_PALETTE$primary,
+    theme = "dark"
+  ),
 
   # ---- Shared sidebar with global filters ----
   sidebar = sidebar(

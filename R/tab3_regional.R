@@ -138,14 +138,12 @@ tab3_server <- function(id = "tab3", filters) {
     # ============================================================
     # MAP 1 — NSW statewide choropleth
     # ============================================================
+    # We draw everything inside renderLeaflet (rather than splitting
+    # base map + leafletProxy observer) so polygons appear on first
+    # render. leafletProxy silently drops its calls if the map hasn't
+    # rendered yet, which is why a split pattern shows an empty map
+    # on app startup until a filter is nudged.
     output$nsw_map <- renderLeaflet({
-      leaflet(options = leafletOptions(zoomControl = TRUE,
-                                       minZoom = 5, maxZoom = 11)) |>
-        addProviderTiles(providers$CartoDB.Positron) |>
-        setView(lng = 146.5, lat = -32.5, zoom = 6)
-    })
-
-    observe({
       md <- map_data()
       req(md)
       pal <- pal_fn()
@@ -157,9 +155,11 @@ tab3_server <- function(id = "tab3", filters) {
         fmt_rank(md$rank)
       ) |> lapply(htmltools::HTML)
 
-      leafletProxy("nsw_map", data = md) |>
-        clearShapes() |>
-        clearControls() |>
+      leaflet(md,
+              options = leafletOptions(zoomControl = TRUE,
+                                       minZoom = 5, maxZoom = 11)) |>
+        addProviderTiles(providers$CartoDB.Positron) |>
+        setView(lng = 146.5, lat = -32.5, zoom = 6) |>
         addPolygons(
           fillColor   = pal(md$rank),
           weight      = 0.6,
@@ -300,10 +300,11 @@ tab3_server <- function(id = "tab3", filters) {
         all   = df |> arrange(desc(rate_per_100k))
       )
 
-      # Highlight selected LGA if any
+      # Highlight selected LGA if any. Note: lga == NULL returns
+      # logical(0), not FALSE, so we guard with if/else rather than &.
       sel <- selected_lga()
       df <- df |>
-        mutate(is_selected = !is.null(sel) & lga == sel)
+        mutate(is_selected = if (is.null(sel)) FALSE else lga == sel)
 
       bar_colours <- ifelse(
         df$is_selected,
@@ -336,7 +337,8 @@ tab3_server <- function(id = "tab3", filters) {
           plot_bgcolor = "rgba(0,0,0,0)",
           paper_bgcolor = "rgba(0,0,0,0)"
         ) |>
-        config(displayModeBar = FALSE)
+        config(displayModeBar = FALSE) |>
+        event_register("plotly_click")
     })
 
     # Click a bar to update selected LGA
@@ -349,12 +351,6 @@ tab3_server <- function(id = "tab3", filters) {
     # MAP 2 — Greater Sydney zoom
     # ============================================================
     output$sydney_map <- renderLeaflet({
-      leaflet(options = leafletOptions(minZoom = 8, maxZoom = 13)) |>
-        addProviderTiles(providers$CartoDB.Positron) |>
-        setView(lng = 151.0, lat = -33.85, zoom = 9)
-    })
-
-    observe({
       md <- map_data()
       req(md)
       pal <- pal_fn()
@@ -368,9 +364,10 @@ tab3_server <- function(id = "tab3", filters) {
         fmt_rank(syd$rank)
       ) |> lapply(htmltools::HTML)
 
-      leafletProxy("sydney_map", data = syd) |>
-        clearShapes() |>
-        clearControls() |>
+      leaflet(syd,
+              options = leafletOptions(minZoom = 8, maxZoom = 13)) |>
+        addProviderTiles(providers$CartoDB.Positron) |>
+        setView(lng = 151.0, lat = -33.85, zoom = 9) |>
         addPolygons(
           fillColor   = pal(syd$rank),
           weight      = 1,

@@ -64,6 +64,28 @@ nsw_lga <- nsw_lga |>
   st_transform(4326) |>
   st_simplify(dTolerance = 100, preserveTopology = TRUE)
 
+# ---- Ensure all geometries are MULTIPOLYGON ----
+# Leaflet's addPolygons can't handle GEOMETRYCOLLECTION. After simplify,
+# a few LGAs (usually coastal/island ones) may produce mixed geometry
+# types. Drop any that have no polygon component at all, then cast the
+# rest uniformly to MULTIPOLYGON.
+geom_types <- st_geometry_type(nsw_lga)
+message("Geometry types after simplify:")
+print(table(geom_types))
+
+# Drop any non-polygon rows (GEOMETRYCOLLECTION that are really just
+# points/lines, empty geometries, etc.). addPolygons can't render them.
+keep <- geom_types %in% c("POLYGON", "MULTIPOLYGON")
+if (any(!keep)) {
+  dropped <- nsw_lga$lga[!keep]
+  message("Dropping ", sum(!keep), " non-polygon rows: ",
+          paste(dropped, collapse = ", "))
+  nsw_lga <- nsw_lga[keep, ]
+}
+
+# Cast everything to MULTIPOLYGON uniformly
+nsw_lga <- st_cast(nsw_lga, "MULTIPOLYGON")
+
 # ---- Report any LGAs in the xlsx that don't match ----
 crime <- readRDS(here("data", "lga_crime_long.rds"))
 crime_lgas <- unique(crime$lga)

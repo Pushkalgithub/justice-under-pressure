@@ -26,12 +26,31 @@ message("Found ", length(sheets), " sheets")
 
 # ---- Helper: read & reshape one sheet ----
 read_one_sheet <- function(sheet_name) {
-  df <- read_excel(raw_path, sheet = sheet_name)
+  # Read everything as character so mixed "nc" + numeric columns don't
+  # force pivot_longer into a list column. We coerce to numeric later.
+  df <- read_excel(raw_path, sheet = sheet_name, col_types = "text")
 
   # First column is always "Local Government Area"
   # Remaining columns alternate: "Jan YYYY - Dec YYYY : Rate per 100,000 population", "... : Rank"
   lga_col <- names(df)[1]
   names(df)[1] <- "lga"
+
+  # Drop footer/note rows. Every sheet ends with a block of citation
+  # notes, hyperlinks, and broken cell references (e.g.
+  #   ='Assault - Domestic Violence'!#REF!
+  # ) where the first column has text but all data columns are NA.
+  # Keep only rows where at least one data column has a value.
+  data_cols <- names(df)[-1]
+  df <- df |>
+    filter(if_any(all_of(data_cols), ~ !is.na(.))) |>
+    # Also drop anything that obviously isn't an LGA name
+    filter(!is.na(lga),
+           !str_detect(lga, "^="),              # formula refs
+           !str_detect(lga, "^\\*"),            # footnote markers
+           !str_detect(lga, "^\\^"),            # footnote markers
+           !str_detect(lga, "^NOTE"),
+           !str_detect(lga, "acknowledgement"),
+           !str_detect(lga, "^HYPERLINK|^=HYPERLINK"))
 
   long <- df |>
     pivot_longer(
@@ -41,12 +60,10 @@ read_one_sheet <- function(sheet_name) {
     ) |>
     mutate(
       year    = as.integer(str_extract(col, "(?<=Dec )\\d{4}")),
-      metric  = if_else(str_detect(col, "Rate per"), "rate_per_100k", "rank")
+      metric  = if_else(str_detect(col, "Rate per"), "rate_per_100k", "rank"),
+      value   = suppressWarnings(as.numeric(na_if(value, "nc")))
     ) |>
     select(-col) |>
-    # "nc" = not calculable → NA
-    mutate(value = na_if(as.character(value), "nc"),
-           value = suppressWarnings(as.numeric(value))) |>
     pivot_wider(names_from = metric, values_from = value) |>
     mutate(offence = sheet_name, .after = lga)
 
@@ -62,6 +79,8 @@ all_data <- all_data |>
     offence = str_trim(offence)
   ) |>
   filter(!is.na(lga)) |>
+  # Drop aggregate/summary rows that aren't real LGAs
+  filter(!str_detect(lga, "^Total NSW")) |>
   arrange(offence, lga, year)
 
 # ---- Quick sanity checks ----
