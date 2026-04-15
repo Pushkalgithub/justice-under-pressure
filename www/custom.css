@@ -1,101 +1,60 @@
-# ---- Packages ----
-suppressPackageStartupMessages({
-  library(shiny)
-  library(bslib)
-  library(dplyr)
-  library(tidyr)
-  library(stringr)
-  library(ggplot2)
-  library(plotly)
-  library(leaflet)
-  library(sf)
-  library(DT)
-  library(scales)
-  library(here)
-})
+/* ============================================================
+   www/custom.css
+   Small tweaks on top of the bslib Flatly theme.
+   ============================================================ */
 
-# ---- Load prepared data ----
-crime_path <- here("data", "lga_crime_long.rds")
-sf_path    <- here("data", "nsw_lga_sf.rds")
-
-if (!file.exists(crime_path)) {
-  stop("Missing data/lga_crime_long.rds. ",
-       "Run data-raw/01_prepare_lga_crime.R first.")
+body {
+  background: #f8f9fa;
 }
 
-crime_long <- readRDS(crime_path)
-
-# sf may not be ready yet during early development — load lazily
-nsw_lga_sf <- if (file.exists(sf_path)) readRDS(sf_path) else NULL
-
-# ---- Constants ----
-OFFENCE_CHOICES <- sort(unique(crime_long$offence))
-YEAR_CHOICES    <- sort(unique(crime_long$year))
-LGA_CHOICES     <- sort(unique(crime_long$lga))
-
-LATEST_YEAR <- max(crime_long$year, na.rm = TRUE)
-
-# Greater Sydney LGAs — used for the "in and around Sydney" zoom view.
-# Source: ABS Greater Capital City Statistical Area (GCCSA) definition.
-SYDNEY_LGAS <- c(
-  "Bayside", "Blacktown", "Blue Mountains", "Burwood", "Camden",
-  "Campbelltown", "Canada Bay", "Canterbury-Bankstown", "Central Coast",
-  "Cumberland", "Fairfield", "Georges River", "Hawkesbury", "Hornsby",
-  "Hunters Hill", "Inner West", "Ku-ring-gai", "Lane Cove", "Liverpool",
-  "Mosman", "North Sydney", "Northern Beaches", "Parramatta", "Penrith",
-  "Randwick", "Ryde", "Strathfield", "Sutherland Shire", "Sydney",
-  "The Hills Shire", "Waverley", "Willoughby", "Wollondilly", "Woollahra"
-)
-
-# ---- Theme ----
-# Colour palette — kept consistent across all tabs so Varsha and Kavya
-# can pull from these same names. Based on the learnui.design picker
-# Kavya mentioned in the group chat.
-APP_PALETTE <- list(
-  primary    = "#1f4e79",   # deep navy — headers, primary accents
-  secondary  = "#4a90c2",   # mid blue
-  accent     = "#e67e22",   # warm orange for highlights / "strain"
-  danger     = "#c0392b",   # red for high-rank / high-pressure
-  neutral    = "#7f8c8d",   # muted grey
-  bg         = "#f8f9fa",
-  surface    = "#ffffff",
-  text       = "#2c3e50"
-)
-
-# Diverging ramp for choropleth (low → high crime rate)
-CHOROPLETH_RAMP <- c("#fff5eb", "#fdd49e", "#fdae6b",
-                     "#fd8d3c", "#e6550d", "#a63603")
-
-app_theme <- bs_theme(
-  version   = 5,
-  bootswatch = "flatly",
-  primary   = APP_PALETTE$primary,
-  secondary = APP_PALETTE$secondary,
-  base_font = font_google("Inter"),
-  heading_font = font_google("Inter", wght = "600"),
-  "navbar-bg" = APP_PALETTE$primary
-)
-
-# ---- Helpers ----
-
-#' Filter the long crime dataframe
-#' @param offence character; one offence category
-#' @param year integer; single year (or NULL for all)
-#' @param lgas character vector of LGAs to keep (or NULL for all)
-filter_crime <- function(offence = NULL, year = NULL, lgas = NULL) {
-  df <- crime_long
-  if (!is.null(offence)) df <- df |> filter(offence == !!offence)
-  if (!is.null(year))    df <- df |> filter(year == !!year)
-  if (!is.null(lgas))    df <- df |> filter(lga %in% lgas)
-  df
+.tab-heading {
+  font-weight: 600;
+  color: #1f4e79;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-#' Format a rate for display
-fmt_rate <- function(x) {
-  ifelse(is.na(x), "—", format(round(x, 0), big.mark = ","))
+.tab-desc {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+  max-width: 800px;
+  line-height: 1.55;
 }
 
-#' Format a rank with ordinal suffix
-fmt_rank <- function(x) {
-  ifelse(is.na(x), "—", paste0("#", x))
+.card {
+  border: 1px solid #e9ecef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+}
+
+.card-header {
+  background: #ffffff;
+  border-bottom: 1px solid #f1f3f5;
+  font-weight: 600;
+  color: #2c3e50;
+  padding: 0.85rem 1.1rem;
+}
+
+.navbar-brand strong {
+  letter-spacing: -0.01em;
+}
+
+/* Leaflet tooltips */
+.leaflet-tooltip {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: Inter, sans-serif;
+}
+
+/* Radio buttons inline in card header */
+.card-header .shiny-options-group {
+  margin: 0;
+}
+.card-header .radio-inline {
+  margin-right: 0.75rem;
+  font-size: 0.85rem;
+  color: #495057;
 }
