@@ -1,0 +1,29 @@
+{
+  "name": "Justice Under Pressure - R Shiny",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [3838],
+  "portsAttributes": {
+    "3838": {
+      "label": "Shiny App",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "reditorsupport.r",
+        "rdebugger.r-debugger",
+        "mechatroner.rainbow-csv"
+      ],
+      "settings": {
+        "r.rterm.linux": "/usr/local/bin/R",
+        "r.bracketedPaste": true,
+        "r.sessionWatcher": true
+      }
+    }
+  },
+  "postCreateCommand": "Rscript -e 'install.packages(c(\"shiny\", \"bslib\", \"dplyr\", \"tidyr\", \"stringr\", \"ggplot2\", \"plotly\", \"leaflet\", \"DT\", \"scales\", \"here\", \"readxl\", \"purrr\", \"languageserver\", \"httpgd\"), repos = \"https://packagemanager.posit.co/cran/__linux__/jammy/latest\")'",
+  "remoteUser": "rstudio"
+}
