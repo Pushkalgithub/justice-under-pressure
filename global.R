@@ -22,15 +22,18 @@ suppressPackageStartupMessages({
   library(leaflet)
   library(sf)
   library(DT)
+  library(zoo)
   library(scales)
   library(here)
   library(htmlwidgets)
+  library(shinyWidgets)
 })
 
 # ---- Load prepared data ----
 crime_path <- here("data", "lga_crime_long.rds")
 sf_path    <- here("data", "nsw_lga_sf.rds")
 court_path <- here("data", "court_data_clean.rds")
+crime_db_path <- here("data", "crime_data_clean.rds")
 
 if (!file.exists(crime_path)) {
   stop("Missing data/lga_crime_long.rds. ",
@@ -41,8 +44,14 @@ if (!file.exists(court_path)) {
         "Run data-raw/03_prepare_court.R first.")
 }
 
+if (!file.exists(crime_db_path)) {
+  stop("Missing data/crime_data_clean.rds. ",
+       "Run data-raw/04_prepare_crime.R first.")
+}
+
 crime_long <- readRDS(crime_path)
 court_bundle <- readRDS(court_path)
+crime_bundle <- readRDS(crime_db_path)
 
 # sf may not be ready yet during early development — load lazily
 nsw_lga_sf <- if (file.exists(sf_path)) readRDS(sf_path) else NULL
@@ -75,6 +84,10 @@ SYDNEY_LGAS <- c(
 APP_PALETTE <- list(
   primary    = "#1f4e79",   # deep navy — headers, primary accents
   secondary  = "#4a90c2",   # mid blue
+  tertiary   = "#1abc9c",   # teal
+  support1   = "#8e44ad",   # purple
+  support2   = "#f4d03f",   # yellow
+  support3   = "#7d8f2a",   # olive
   accent     = "#e67e22",   # warm orange for highlights / "strain"
   danger     = "#c0392b",   # red for high-rank / high-pressure
   neutral    = "#7f8c8d",   # muted grey
