@@ -24,24 +24,29 @@ tab3_ui <- function(id = "tab3") {
       "map or a bar in the ranking to drill down. Regions are coloured by ",
       "their rank (1 = highest rate per 100,000 population)."),
     
-    selectInput(
-          ns("offence"),
-          label = "Offence category",
-          choices = OFFENCE_CHOICES,
-          selected = "Assault - Domestic Violence"
-        ),
-
-        sliderInput(
-          ns("year"),
-          label = "Year",
-          min = min(YEAR_CHOICES),
-          max = max(YEAR_CHOICES),
-          value = LATEST_YEAR,
-          step = 1,
-          sep = "",
-          ticks = FALSE,
-          animate = animationOptions(interval = 1500, loop = FALSE)
-        ),
+    fluidRow(
+      column(5,
+             selectInput(
+               ns("offence"),
+               label = "Offence category",
+               choices = OFFENCE_CHOICES,
+               selected = "Assault - Domestic Violence")
+      ),
+      column(5, 
+             sliderInput(
+               ns("year"),
+               label = "Year",
+               min = min(YEAR_CHOICES),
+               max = max(YEAR_CHOICES),
+               value = LATEST_YEAR,
+               step = 1,
+               sep = "",
+               # ticks = FALSE,
+               animate = animationOptions(interval = 1500, loop = FALSE))
+      )
+    ),
+    
+    
 
     fluidRow(
       column(8,
