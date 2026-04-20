@@ -92,7 +92,7 @@ tab2_server <- function(id = "tab2", filters) {
       court_bundle$main %>%
         filter(
           grepl(input$court_select, Court.Type, ignore.case = TRUE),
-          grepl("2024", Timeframe) & grepl("25", Timeframe)
+          grepl("2024.25", Timeframe)
         )
     })
     
