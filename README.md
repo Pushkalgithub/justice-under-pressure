@@ -96,5 +96,5 @@ Rscript -e 'shiny::runApp(host = "0.0.0.0", port = 3838)'
 
 ## Deployment
 
-App is deployed to [shinyapps.io](https://www.shinyapps.io) — URL will be
+App is deployed to [shinyapps.io](https://unsw.shinyapps.io/justice-under-pressure/) — URL will be
 added here once live.
