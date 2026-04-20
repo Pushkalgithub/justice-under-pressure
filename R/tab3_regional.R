@@ -23,6 +23,25 @@ tab3_ui <- function(id = "tab3") {
       "and how do LGAs stack up against each other? Click a region on the ",
       "map or a bar in the ranking to drill down. Regions are coloured by ",
       "their rank (1 = highest rate per 100,000 population)."),
+    
+    selectInput(
+          ns("offence"),
+          label = "Offence category",
+          choices = OFFENCE_CHOICES,
+          selected = "Assault - Domestic Violence"
+        ),
+
+        sliderInput(
+          ns("year"),
+          label = "Year",
+          min = min(YEAR_CHOICES),
+          max = max(YEAR_CHOICES),
+          value = LATEST_YEAR,
+          step = 1,
+          sep = "",
+          ticks = FALSE,
+          animate = animationOptions(interval = 1500, loop = FALSE)
+        ),
 
     fluidRow(
       column(8,
@@ -89,15 +108,15 @@ tab3_ui <- function(id = "tab3") {
   )
 }
 
-tab3_server <- function(id = "tab3", filters) {
+tab3_server <- function(id = "tab3") {
   moduleServer(id, function(input, output, session) {
 
     # ---- Reactive: filtered crime data for the selected offence & year ----
     tab_data <- reactive({
-      req(filters$offence(), filters$year())
+      req(input$offence, input$year)
       filter_crime(
-        offence = filters$offence(),
-        year    = filters$year()
+        offence = input$offence,
+        year    = input$year
       )
     })
 
@@ -234,7 +253,7 @@ tab3_server <- function(id = "tab3", filters) {
 
     output$sparkline <- renderPlotly({
       lga <- selected_lga(); req(lga)
-      trend <- filter_crime(offence = filters$offence(), lgas = lga) |>
+      trend <- filter_crime(offence = input$offence, lgas = lga) |>
         arrange(year)
 
       plot_ly(trend, x = ~year, y = ~rate_per_100k,

@@ -16,6 +16,26 @@ tab2_ui <- function(id = "tab2") {
     p(class = "tab-desc",
       "How crime volume translates into caseload for the courts — ",
       "lodgements, finalisations, and processing times."),
+    div(
+      class = "row w-100 g-3", # g-3 adds a nice gap between cards
+      column(3, card(
+        card_header("CASES LODGED", style = 'opacity:0.55; font-size:0.8rem;'),
+        uiOutput(ns("metric_lodged"))
+      )),
+      column(3, card(
+        card_header("MEDIAN TIME TO COMMIT", style = 'opacity:0.55; font-size:0.8rem;'),
+        uiOutput(ns("metric_commit"))
+      )),
+      column(3, card(
+        card_header("MEDIAN TIME TO SENTENCE", style = 'opacity:0.55; font-size:0.8rem;'),
+        uiOutput(ns("metric_sentence"))
+      )),
+      column(3, card(
+        card_header("MEDIAN TIME TO FINALISE", style = 'opacity:0.55; font-size:0.8rem;'),
+        uiOutput(ns("metric_finalise"))
+      )),
+      p('All values shown for the court type selected below', style = 'margin-top:-10px; font-size:0.8rem; opacity:0.55; font-style:italic')
+    ),
 
     fluidRow(
       column(12,
@@ -66,6 +86,78 @@ tab2_server <- function(id = "tab2", filters) {
     # the BOCSAR court processing dataset you've been working with.
     # Place it in data-raw/ and add a prep script similar to
     # data-raw/01_prepare_lga_crime.R.
+    
+    current_metrics <- reactive({
+      req(input$court_select)
+      court_bundle$main %>%
+        filter(
+          grepl(input$court_select, Court.Type, ignore.case = TRUE),
+          grepl("2024", Timeframe) & grepl("25", Timeframe)
+        )
+    })
+    
+    prev_year_metrics <- reactive({
+      req(input$court_select)
+      court_bundle$main %>%
+        filter(
+          grepl(input$court_select, Court.Type, ignore.case = TRUE),
+          grepl("2023", Timeframe) & grepl("24", Timeframe)
+        )
+    })
+    
+    show_perc_change <- function(current, previous) {
+      if (length(current) == 0 || length(previous) == 0 || previous == 0) return(NA)
+      
+      perc_change <- ((current - previous) / previous) * 100
+      color <- if (perc_change >= 0) "green" else "red"
+      icon  <- if (perc_change >= 0) "↑" else "↓"
+      tags$span(
+        style = paste0("color:", color, "; font-size: 0.9rem; font-weight: 600; "),
+        sprintf("%s %.1f%%", icon, abs(perc_change))
+      )
+    }
+    
+    output$metric_lodged <- renderUI({
+      curr <- current_metrics()$Count
+      prev <- prev_year_metrics()$Count
+      div(
+        div(style = "font-size: 1.8rem; font-weight: 700; display: flex;", 
+            if(length(curr) > 0) format(curr, big.mark = ",") else "N/A"),
+        show_perc_change(curr, prev)
+      )
+    })
+    
+    output$metric_commit <- renderUI({
+      curr <- current_metrics()$Arrest.to.committal..c.
+      prev <- prev_year_metrics()$Arrest.to.committal..c.
+      div(
+        div(style = "font-size: 1.8rem; font-weight: 700; display: flex;", 
+            if(length(curr) > 0) paste(curr, 'days') else "N/A"),
+        show_perc_change(curr, prev)
+      )
+    })
+    
+    # Render Backlog
+    output$metric_sentence <- renderUI({
+      curr <- current_metrics()$Outcome.to.sentence
+      prev <- prev_year_metrics()$Outcome.to.sentence
+      div(
+        div(style = "font-size: 1.8rem; font-weight: 700; display: flex;", 
+            if(length(curr) > 0) paste(curr, 'days') else "N/A"),
+        show_perc_change(curr, prev)
+      )
+    })
+    
+    # Render Median Time
+    output$metric_finalise <- renderUI({
+      curr <- current_metrics()$Arrest.to.finalisation..c.
+      prev <- prev_year_metrics()$Arrest.to.finalisation..c.
+      div(
+        div(style = "font-size: 1.8rem; font-weight: 700; display: flex;", 
+            if(length(curr) > 0) paste(curr, 'days') else "N/A"),
+        show_perc_change(curr, prev)
+      )
+    })
     
    
     # Graph 1 : Processing time distribution
