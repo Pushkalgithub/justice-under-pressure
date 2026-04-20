@@ -53,6 +53,20 @@ crime_long <- readRDS(crime_path)
 court_bundle <- readRDS(court_path)
 crime_bundle <- readRDS(crime_db_path)
 
+# Some rows in the prepared crime data have a rate but no stored rank.
+# Recompute those ranks from the rate within each offence/year so LGAs
+# like Sydney still participate in the ranked views.
+crime_long <- crime_long |>
+  group_by(offence, year) |>
+  mutate(
+    rank = if_else(
+      is.na(rank) & !is.na(rate_per_100k),
+      as.numeric(min_rank(desc(rate_per_100k))),
+      rank
+    )
+  ) |>
+  ungroup()
+
 # sf may not be ready yet during early development — load lazily
 nsw_lga_sf <- if (file.exists(sf_path)) readRDS(sf_path) else NULL
 
