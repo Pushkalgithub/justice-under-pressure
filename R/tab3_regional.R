@@ -23,14 +23,17 @@ tab3_ui <- function(id = "tab3") {
       "and how do LGAs stack up against each other? Click a region on the ",
       "map or a bar in the ranking to drill down. Regions are coloured by ",
       "their rank (1 = highest rate per 100,000 population)."),
-    
-    selectInput(
+
+    fluidRow(
+      column(4,
+        selectInput(
           ns("offence"),
           label = "Offence category",
           choices = OFFENCE_CHOICES,
           selected = "Assault - Domestic Violence"
-        ),
-
+        )
+      ),
+      column(4,
         sliderInput(
           ns("year"),
           label = "Year",
@@ -41,7 +44,9 @@ tab3_ui <- function(id = "tab3") {
           sep = "",
           ticks = FALSE,
           animate = animationOptions(interval = 1500, loop = FALSE)
-        ),
+        )
+      )
+    ),
 
     fluidRow(
       column(8,
@@ -199,12 +204,39 @@ tab3_server <- function(id = "tab3") {
           ),
           layerId = ~lga
         ) |>
-        addLegend(
-          position = "bottomright",
-          pal      = pal,
-          values   = md$rank,
-          title    = "Rank (1 = worst)",
-          opacity  = 0.9
+        addControl(
+          html = sprintf(
+            '<div style="
+              background: rgba(255,255,255,0.92);
+              padding: 8px 12px;
+              border-radius: 6px;
+              font-family: Inter, sans-serif;
+              font-size: 11px;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+              min-width: 180px;
+            ">
+              <div style="font-weight: 600; color: #2c3e50; margin-bottom: 6px;">
+                Crime Rate Rank
+              </div>
+              <div style="
+                height: 12px;
+                border-radius: 3px;
+                background: linear-gradient(to right, %s);
+              "></div>
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                margin-top: 3px;
+                color: #6c757d;
+                font-size: 10px;
+              ">
+                <span>Worst</span>
+                <span>Safest</span>
+              </div>
+            </div>',
+            paste(CHOROPLETH_RAMP, collapse = ", ")
+          ),
+          position = "bottomright"
         )
     })
 
@@ -246,7 +278,7 @@ tab3_server <- function(id = "tab3") {
           )
         ),
         tags$hr(),
-        tags$small(class = "text-muted", "10-year trend"),
+        tags$small(class = "text-muted", "10-year trend (Crime rate per 100k)"),
         plotlyOutput(session$ns("sparkline"), height = "80px")
       )
     })
@@ -406,12 +438,39 @@ tab3_server <- function(id = "tab3") {
           ),
           layerId = ~paste0("syd_", lga)
         ) |>
-        addLegend(
-          position = "bottomright",
-          pal      = pal,
-          values   = syd$rank,
-          title    = "Rank (1 = worst)",
-          opacity  = 0.9
+        addControl(
+          html = sprintf(
+            '<div style="
+              background: rgba(255,255,255,0.92);
+              padding: 8px 12px;
+              border-radius: 6px;
+              font-family: Inter, sans-serif;
+              font-size: 11px;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+              min-width: 180px;
+            ">
+              <div style="font-weight: 600; color: #2c3e50; margin-bottom: 6px;">
+                Crime Rate Rank
+              </div>
+              <div style="
+                height: 12px;
+                border-radius: 3px;
+                background: linear-gradient(to right, %s);
+              "></div>
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                margin-top: 3px;
+                color: #6c757d;
+                font-size: 10px;
+              ">
+                <span>Worst</span>
+                <span>Safest</span>
+              </div>
+            </div>',
+            paste(CHOROPLETH_RAMP, collapse = ", ")
+          ),
+          position = "bottomright"
         )
     })
 
