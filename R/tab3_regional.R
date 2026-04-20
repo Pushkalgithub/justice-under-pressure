@@ -43,7 +43,7 @@ tab3_ui <- function(id = "tab3") {
           value = LATEST_YEAR,
           step = 1,
           sep = "",
-          ticks = FALSE,
+          # ticks = FALSE,
           animate = animationOptions(interval = 1500, loop = FALSE)
         )
       )
