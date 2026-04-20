@@ -24,6 +24,7 @@ tab3_ui <- function(id = "tab3") {
       "map or a bar in the ranking to drill down. Regions are coloured by ",
       "their rank (1 = highest rate per 100,000 population)."),
 
+
     fluidRow(
       column(4,
         selectInput(
@@ -42,7 +43,7 @@ tab3_ui <- function(id = "tab3") {
           value = LATEST_YEAR,
           step = 1,
           sep = "",
-          ticks = FALSE,
+          # ticks = FALSE,
           animate = animationOptions(interval = 1500, loop = FALSE)
         )
       )

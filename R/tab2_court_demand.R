@@ -17,7 +17,7 @@ tab2_ui <- function(id = "tab2") {
       "How crime volume translates into caseload for the courts — ",
       "lodgements, finalisations, and processing times."),
     div(
-      class = "row w-100 g-3", # g-3 adds a nice gap between cards
+      class = "row w-100 g-3", 
       column(3, card(
         card_header("CASES LODGED", style = 'opacity:0.55; font-size:0.8rem;'),
         uiOutput(ns("metric_lodged"))
@@ -92,7 +92,7 @@ tab2_server <- function(id = "tab2", filters) {
       court_bundle$main %>%
         filter(
           grepl(input$court_select, Court.Type, ignore.case = TRUE),
-          grepl("2024", Timeframe) & grepl("25", Timeframe)
+          grepl("2024.25", Timeframe)
         )
     })
     
@@ -106,14 +106,23 @@ tab2_server <- function(id = "tab2", filters) {
     })
     
     show_perc_change <- function(current, previous) {
-      if (length(current) == 0 || length(previous) == 0 || previous == 0) return(NA)
+      if (length(current) == 0 || length(previous) == 0 || previous == 0) return(tags$span(
+        style = "font-size: 0.9rem; font-weight: 600; opacity: 0.6",
+        "N/A"
+      ))
       
       perc_change <- ((current - previous) / previous) * 100
       color <- if (perc_change >= 0) "green" else "red"
       icon  <- if (perc_change >= 0) "↑" else "↓"
-      tags$span(
-        style = paste0("color:", color, "; font-size: 0.9rem; font-weight: 600; "),
-        sprintf("%s %.1f%%", icon, abs(perc_change))
+      tagList(
+        tags$span(
+          style = paste0("color:", color, "; font-size: 0.9rem; font-weight: 600;"),
+          sprintf("%s %.1f%%", icon, abs(perc_change))
+        ),
+        tags$span(
+          style = "font-size: 0.8rem; opacity: 0.6;",
+          " (compared to 2023–24)"
+        )
       )
     }
     
@@ -175,7 +184,13 @@ tab2_server <- function(id = "tab2", filters) {
         mutate(stage = factor(stage, 
                               levels = c("arrest_to_comm_perc", "comm_to_outcome_perc", "outcome_to_sent_perc"),
                               labels = c("Arrest to committal", "Committal to outcome", "Outcome to sentence")))
-      p <- ggplot(plot_df, aes(x=Timeframe, y=percentage, fill=stage, text = paste0("Percentage: ", round(percentage, 2), '%'))) + 
+      p <- ggplot(plot_df, aes(x=Timeframe, y=percentage, fill=stage, 
+                               text=paste0(
+                                 "Year: ", Timeframe,
+                                 "<br>Stage: ", stage,
+                                 "<br>Percentage (of time): ", round(percentage, 2), '%'
+                               )
+                               )) + 
         geom_col() +  
         labs(
           # title = paste("Breakdown of", input$court_select, "case processing time"),
@@ -208,9 +223,13 @@ tab2_server <- function(id = "tab2", filters) {
     # Graph 2 : Arrest to finalisation time for courts
     output$finalisations_plot <- renderPlotly({
       plot_df_2 <- court_bundle$main 
-      p2 <- ggplot(plot_df_2, aes(x = Timeframe, y = Arrest.to.finalisation..c., color = Court.Type, group = Court.Type, text = paste0("Median days: ", Arrest.to.finalisation..c.))) + 
-        geom_line() + 
-        geom_point() + 
+      p2 <- ggplot(plot_df_2, aes(x = Timeframe, y = Arrest.to.finalisation..c., color = Court.Type, group = Court.Type, 
+                                  text=paste0(
+                                    "Year: ", Timeframe,
+                                    "<br>Median Days: ", Arrest.to.finalisation..c.
+                                  ))) + 
+        geom_line(size=0.4) + 
+        geom_point(size=0.8) + 
         labs(
           # title = "Median days from arrest to finalisation by court type",
           x = "Financial year",
@@ -218,10 +237,10 @@ tab2_server <- function(id = "tab2", filters) {
           colour = "Court type",
         ) +
         scale_colour_manual(values = c(
-          "Supreme Court"    = APP_PALETTE$primary,
-          "District Court"   = APP_PALETTE$secondary,
-          "Local Court"      = APP_PALETTE$accent,
-          "Children's Court" = APP_PALETTE$neutral
+          "Supreme Court"    = COLOR_BLIND_PALETTE$primary,
+          "District Court"   = COLOR_BLIND_PALETTE$secondary,
+          "Local Court"      = COLOR_BLIND_PALETTE$support1,
+          "Children's Court" = COLOR_BLIND_PALETTE$support4
         )) + 
         theme(
           panel.grid.major = element_blank(),
@@ -235,22 +254,23 @@ tab2_server <- function(id = "tab2", filters) {
           limits = c(0, 1200)
         )
       
+      
       ggplotly(p2, tooltip = 'text') %>%
         onRender("
           function(el) {
           el.on('plotly_hover', function(d) {
             var pn = d.points[0].curveNumber;
             // 1. Dim all lines first
-            var dim = { 'line.width': 1, 'opacity': 0.2 };
+            var dim = { 'line.width': 1.2, 'opacity': 0.2 };
             Plotly.restyle(el, dim);
-      
+
             // 2. Highlight the specific hovered line
-            var highlight = { 'line.width': 4, 'opacity': 1 };
+            var highlight = { 'line.width': 1.2, 'opacity': 1 };
             Plotly.restyle(el, highlight, [pn]);
           });
           el.on('plotly_unhover', function(d) {
             // Reset everything to normal when leaving
-            var reset = { 'line.width': 1, 'opacity': 1 };
+            var reset = { 'line.width': 1.2, 'opacity': 1 };
             Plotly.restyle(el, reset);
           });
         }
@@ -260,9 +280,14 @@ tab2_server <- function(id = "tab2", filters) {
     # Graph 3 : Cases filed by court
     output$cases_by_court_plot <- renderPlotly({
       plot_df_3 <- court_bundle$percent_change
-      p3 <- ggplot(plot_df_3, aes(x = Timeframe, y = perc_change, color = Court.Type, group = Court.Type, text = paste0("Change: ", round(perc_change, 2), "%"))) + 
-        geom_line() + 
-        geom_point() + 
+      p3 <- ggplot(plot_df_3, aes(x = Timeframe, y = perc_change, color = Court.Type, group = Court.Type, 
+                                  text=paste0(
+                                    "Year: ", Timeframe,
+                                    "<br>Change: ", round(perc_change, 2), "%"
+                                  )
+                                  )) + 
+        geom_line(size=0.4) + 
+        geom_point(size=0.8) + 
         labs(
           # title = "Year-on-year % change in median days from arrest to finalisation",
           x = "Financial year",
@@ -270,10 +295,10 @@ tab2_server <- function(id = "tab2", filters) {
           colour = "Court type",
         ) +
         scale_colour_manual(values = c(
-          "Supreme Court"    = APP_PALETTE$primary,
-          "District Court"   = APP_PALETTE$secondary,
-          "Local Court"      = APP_PALETTE$accent,
-          "Children's Court" = APP_PALETTE$neutral
+          "Supreme Court"    = COLOR_BLIND_PALETTE$primary,
+          "District Court"   = COLOR_BLIND_PALETTE$secondary,
+          "Local Court"      = COLOR_BLIND_PALETTE$support1,
+          "Children's Court" = COLOR_BLIND_PALETTE$support4
         )) + 
         geom_hline(aes(yintercept = 0), color='gray', alpha = 0.4, linewidth=0.3) +
         theme(
@@ -292,16 +317,16 @@ tab2_server <- function(id = "tab2", filters) {
           el.on('plotly_hover', function(d) {
             var pn = d.points[0].curveNumber;
             // 1. Dim all lines first
-            var dim = { 'line.width': 1, 'opacity': 0.2 };
+            var dim = { 'line.width': 1.2, 'opacity': 0.2 };
             Plotly.restyle(el, dim);
       
             // 2. Highlight the specific hovered line
-            var highlight = { 'line.width': 4, 'opacity': 1 };
+            var highlight = { 'line.width': 1.2, 'opacity': 1 };
             Plotly.restyle(el, highlight, [pn]);
           });
           el.on('plotly_unhover', function(d) {
             // Reset everything to normal when leaving
-            var reset = { 'line.width': 1, 'opacity': 1 };
+            var reset = { 'line.width': 1.2, 'opacity': 1 };
             Plotly.restyle(el, reset);
           });
         }

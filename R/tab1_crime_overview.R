@@ -23,17 +23,26 @@ tab1_ui <- function(id = "tab1") {
           card_header("Crime Trend Over Time"),
           fluidRow(
             column(5, 
-              pickerInput(inputId = ns("offence_category"), 
-                          label = "Offence Category",
-                          choices = unique(crime_bundle$main$offence_category), 
-                          selected = c("Theft", "Malicious Damage to Property", "Assault", "Transport Regulatory Offence", "Justice Violation"),
-                          multiple = TRUE,
-                          options = list(
-                            `live-search` = TRUE,
-                            `max-options` = 7,
-                            `max-options-text` = "Maximum 7 categories allowed"
-                          )
-              )
+                   div(
+                     tags$label("Offence Category", `for` = ns("offence_category"), class = "control-label"),
+                     
+                     # warning for categories selected
+                     uiOutput(ns("picker_warning")),
+                     
+                     pickerInput(
+                       inputId = ns("offence_category"), 
+                       label = NULL, 
+                       choices = unique(crime_bundle$main$offence_category), 
+                       selected = c("Theft", "Malicious Damage to Property", "Assault", 
+                                    "Transport Regulatory Offence", "Justice Violation"),
+                       multiple = TRUE,
+                       options = list(
+                         `live-search` = TRUE,
+                         `max-options` = 7,
+                         `max-options-text` = list("Limit reached", "Maximum 7 categories allowed")
+                       )
+                     )
+                   )
             ),
             column(5, 
               sliderInput(inputId = ns("year_line"),
@@ -137,7 +146,23 @@ tab1_server <- function(id = "tab1", filters) {
       }
       prev_selection(current)
       
+      
     }, ignoreNULL = FALSE)
+    
+    # warning for categories selected
+    output$picker_warning <- renderUI({
+      if(length(input$offence_category) >= 7) {
+        tags$div(
+          style = "color: #d9534f; font-size: 0.85rem; font-weight: bold; margin-top: 5px; margin-bottom: 5px",
+          "Maximum 7 categories reached."
+        )
+      } else {
+        tags$div(
+          style = "color: #666; font-size: 0.8rem; margin-top: 5px; margin-bottom:5px",
+          paste0(length(input$offence_category), " of 7 categories selected")
+        )
+      }
+    })
     
     
     observeEvent(input$year_line, {
@@ -177,7 +202,7 @@ tab1_server <- function(id = "tab1", filters) {
                         "Quarter: ", format(quarter_date, "Q%q %Y"),
                         "<br>Count: ", crime_count
                       ))) +
-        geom_line(size=0.3) +
+        geom_line(size=0.4) +
         geom_point(size=0.8) +
         scale_x_yearqtr(format="Q%q %Y",
                         breaks=seq(
@@ -193,13 +218,13 @@ tab1_server <- function(id = "tab1", filters) {
           breaks = scales::pretty_breaks(n = 10)
         ) +
         scale_color_manual(values=c(
-          APP_PALETTE$primary,
-          APP_PALETTE$tertiary,
-          APP_PALETTE$accent,
-          APP_PALETTE$neutral,
-          APP_PALETTE$support1,
-          APP_PALETTE$support2,
-          APP_PALETTE$support3          
+          COLOR_BLIND_PALETTE$primary,
+          COLOR_BLIND_PALETTE$secondary,
+          COLOR_BLIND_PALETTE$support1,
+          COLOR_BLIND_PALETTE$support5,
+          COLOR_BLIND_PALETTE$support2,
+          COLOR_BLIND_PALETTE$support4,
+          COLOR_BLIND_PALETTE$support6          
           )
         ) +
         labs(
@@ -216,16 +241,37 @@ tab1_server <- function(id = "tab1", filters) {
           plot.background = element_blank()
         )
       
-      ggplotly(p, tooltip="text") %>%
-        highlight(
-          on = "plotly_hover",
-          off = "plotly_doubleclick",
-          opacityDim = 0.4,   # fade others
-          selected = attrs_selected(
-            line = list(width = 2),   # bold selected
-            showlegend = FALSE
-          )
-        )
+      # ggplotly(p, tooltip="text") %>%
+      #   highlight(
+      #     on = "plotly_hover",
+      #     off = "plotly_doubleclick",
+      #     opacityDim = 0.4,   # fade others
+      #     selected = attrs_selected(
+      #       line = list(width = 2),   # bold selected
+      #       showlegend = FALSE
+      #     )
+      #   )
+      
+      ggplotly(p, tooltip = 'text') %>%
+        onRender("
+          function(el) {
+          el.on('plotly_hover', function(d) {
+            var pn = d.points[0].curveNumber;
+            // 1. Dim all lines first
+            var dim = { 'line.width': 1.2, 'opacity': 0.2 };
+            Plotly.restyle(el, dim);
+
+            // 2. Highlight the specific hovered line
+            var highlight = { 'line.width': 1.2, 'opacity': 1 };
+            Plotly.restyle(el, highlight, [pn]);
+          });
+          el.on('plotly_unhover', function(d) {
+            // Reset everything to normal when leaving
+            var reset = { 'line.width': 1.2, 'opacity': 1 };
+            Plotly.restyle(el, reset);
+          });
+        }
+      ")
     })
     
     

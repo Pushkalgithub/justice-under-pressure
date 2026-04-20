@@ -65,25 +65,25 @@ ui <- page_sidebar(
     ),
     
     hr(style = 'margin-top:-5px'),
-    div("ANALYSIS", style = "opacity:0.55; font-size:0.8rem;"),
-    
-    # Nav between tabs
-    navset_pill_list(
-      id = "main_nav", 
-      widths = c(12, 12),
-      nav_panel(title = "Crime Overview", value = "tab1", icon = icon("chart-line")),
-      nav_panel(title = "Court Demand", value = "tab2", icon = icon("gavel")),
-      nav_panel(title = "Regional Analysis", value = "tab3", icon = icon("map-location-dot"))
+    div(
+      style = "flex-grow: 1;", 
+      div("ANALYSIS", style = "opacity:0.55; font-size:0.8rem; margin-bottom:10px"),
+      navset_pill_list(
+        id = "main_nav", 
+        widths = c(12, 12),
+        well = FALSE,
+        nav_panel(title = "Crime Overview", value = "tab1", icon = icon("chart-line")),
+        nav_panel(title = "Court Demand", value = "tab2", icon = icon("gavel")),
+        nav_panel(title = "Regional Analysis", value = "tab3", icon = icon("map-location-dot"))
+      )
     ),
     
-    
     # Footer
+    hr(),
     div(
-      class = "sidebar-footer",
-      style = "margin-top: auto; padding-top: 20px;",
-      hr(style = "opacity: 0.2;"),
+      class = "pb-3", 
       tags$small(
-        style = "color: #6c757d; display: block; padding-bottom: 10px;",
+        class = "text-muted",
         tags$strong("DATA5002"), tags$br(),
         "Pushkal · Varsha · Kavya"
       )
