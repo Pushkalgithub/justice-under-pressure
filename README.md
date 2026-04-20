@@ -13,79 +13,88 @@ and court capacity across New South Wales.
 
 ```
 justice-under-pressure/
-├── app.R                         # main Shiny entry point
-├── global.R                      # packages, data, constants, helpers
+├── .devcontainer/
+│   ├── devcontainer.json             # Codespaces config (R + geospatial)
+│   └── Dockerfile                    # rocker/geospatial base image
+├── data/
+│   ├── lga_crime_long.rds            # Tidy long-format LGA crime data
+│   ├── nsw_lga_sf.rds                # Simplified NSW LGA boundaries (sf)
+│   ├── court_data_clean.rds          # Court processing data (Kavya)
+│   └── crime_data_clean.rds          # Quarterly crime data (Varsha)
+├── data-raw/
+│   ├── lga_boundaries/               # ABS LGA 2023 shapefile (not tracked)
+│   ├── NSW_LGA_Crime_Statistics.xlsx  # BOCSAR LGA crime rates + ranks
+│   ├── NSW_Court_Finalization_Statistics.xlsx
+│   ├── NSW_Quarterly_Crime_Count.xlsx
+│   ├── 01_prepare_lga_crime.R        # xlsx → lga_crime_long.rds
+│   ├── 02_prepare_lga_boundaries.R   # Shapefile → nsw_lga_sf.rds
+│   ├── 03_prepare_court.R            # Court data → court_data_clean.rds
+│   └── 04_prepare_crime.R            # Quarterly crime → crime_data_clean.rds
 ├── R/
-│   ├── tab1_crime_overview.R     # Varsha — crime trends, breakdowns
-│   ├── tab2_court_demand.R       # Kavya  — processing, finalisations
-│   └── tab3_regional.R           # Pushkal — choropleth, rankings
-├── data-raw/                     # raw inputs + prep scripts (not loaded at runtime)
-│   ├── NSW_LGA_Crime_Statistics.xlsx
-│   ├── 01_prepare_lga_crime.R
-│   └── 02_prepare_lga_boundaries.R
-├── data/                         # cleaned .rds files (loaded by global.R)
-│   ├── lga_crime_long.rds
-│   └── nsw_lga_sf.rds
+│   ├── tab1_crime_overview.R         # Varsha — crime trends, breakdowns
+│   ├── tab2_court_demand.R           # Kavya — processing times, finalisations
+│   └── tab3_regional.R               # Pushkal — choropleth, rankings, Sydney zoom
 ├── www/
-│   └── custom.css
-└── README.md
+│   └── custom.css                    # App-wide styling overrides
+├── app.R                             # Main Shiny entry point
+├── global.R                          # Packages, data loading, constants, helpers
+├── AI_LLM_Transcripts.md            # Generative AI usage log
+├── README.md
+└── .gitignore
 ```
 
 ## Setup
 
 1. **Clone** this repo.
-2. **Install packages:**
+2. **Install R packages:**
    ```r
    install.packages(c(
      "shiny", "bslib", "dplyr", "tidyr", "stringr", "ggplot2",
-     "plotly", "leaflet", "sf", "DT", "scales", "here",
-     "readxl", "purrr", "htmlwidgets"
+     "plotly", "leaflet", "sf", "DT", "scales", "here", "readxl",
+     "purrr", "zoo", "htmlwidgets", "shinyWidgets"
    ))
    ```
-3. **Prepare data** (run once):
+3. **Prepare data** (run once, in order):
    ```r
    source("data-raw/01_prepare_lga_crime.R")
    source("data-raw/02_prepare_lga_boundaries.R")
    source("data-raw/03_prepare_court.R")
+   source("data-raw/04_prepare_crime.R")
    ```
-   The second script needs the ABS NSW LGA boundary shapefile — see the
-   comments at the top of `02_prepare_lga_boundaries.R` for where to
-   download it.
+   Script 02 requires the ABS LGA 2023 boundary shapefile in
+   `data-raw/lga_boundaries/`. See comments in the script for the
+   download link.
 4. **Run the app:**
    ```r
    shiny::runApp()
    ```
 
-## Ownership
+### Using GitHub Codespaces
 
-| Owner   | Responsibilities |
-|---------|------------------|
-| Pushkal | Tab 3 (Regional), data cleaning, deployment, app shell |
-| Varsha  | Tab 1 (Crime Overview), data cleaning, proposal lead |
-| Kavya   | Tab 2 (Court Demand), data visualisation, court data prep |
+The repo includes a `.devcontainer` config. Create a Codespace from the
+repo page and the R environment + system dependencies install automatically.
+Then run the prep scripts and launch with:
 
-## Working in your own tab
-
-Each tab is a self-contained Shiny module in `R/tabN_*.R`. The pattern:
-
-```r
-tabN_ui <- function(id) { ... }            # UI for the tab
-tabN_server <- function(id, filters) { ... }  # Server logic; `filters`
-                                               # is a list of reactives for
-                                               # the global sidebar filters
+```bash
+Rscript -e 'shiny::runApp(host = "0.0.0.0", port = 3838)'
 ```
 
-Use `filter_crime(offence, year, lgas)` from `global.R` to get filtered data.
-Use `APP_PALETTE` for colours so all tabs stay consistent.
+## Ownership
+
+| Owner   | Tab | Responsibilities |
+|---------|-----|------------------|
+| Varsha  | 1 — Crime Overview | Crime trend, offence breakdown, top offences table, data cleaning |
+| Kavya   | 2 — Court Demand | Processing time distribution, finalisations, YoY change, court data prep |
+| Pushkal | 3 — Regional Analysis | NSW choropleth, ranked bar chart, Sydney zoom, app shell, deployment |
 
 ## Data sources
 
-- **BOCSAR LGA Crime Statistics** (2016–2025) — rate per 100,000 population
-  and rank, 27 offence categories across ~128 NSW LGAs.
-- **ABS LGA Boundaries** (ASGS 2023) — geometry for the choropleth.
-- Court processing data: TBD (Kavya's tab).
+- **BOCSAR LGA Crime Statistics** (2016–2025) — rate per 100k and rank across 27 offence categories and ~130 NSW LGAs.
+- **BOCSAR Court Finalization Statistics** — court processing times, lodgements, and finalisations by court type.
+- **BOCSAR Quarterly Crime Count** — quarterly incident counts by offence category.
+- **ABS LGA Boundaries** (ASGS 2023) — geometry for the choropleth maps.
 
 ## Deployment
 
-App will be deployed to [shinyapps.io](https://www.shinyapps.io) — URL
+App is deployed to [shinyapps.io](https://www.shinyapps.io) — URL will be
 added here once live.
