@@ -30,10 +30,10 @@ suppressPackageStartupMessages({
 })
 
 # ---- Load prepared data ----
-crime_path <- here("data", "lga_crime_long.rds")
-sf_path    <- here("data", "nsw_lga_sf.rds")
-court_path <- here("data", "court_data_clean.rds")
-crime_db_path <- here("data", "crime_data_clean.rds")
+crime_path <- "data/lga_crime_long.rds"
+sf_path    <- "data/nsw_lga_sf.rds"
+court_path <- "data/court_data_clean.rds"
+crime_db_path <- "data/crime_data_clean.rds"
 
 if (!file.exists(crime_path)) {
   stop("Missing data/lga_crime_long.rds. ",
